@@ -72,7 +72,7 @@ definitionList::
 ## note || This is the default event type, used when code::\type:: is not specified. It plays one or more Synth nodes on the server, with an automatic release after code::\sustain:: beats if the SynthDef has a code::gate:: argument.
 definitionList::
 ## Standard Timing and Node control arguments ||
-## sendGate || Override SynthDef behavior for the code::gate:: argument. If the SynthDef as code::gate::, setting code::sendGate = false:: prevents the release message from being sent. Rarely used.
+## sendGate || Override SynthDef behavior for the code::gate:: argument. If the SynthDef has code::gate::, setting code::sendGate = false:: prevents the release message from being sent. Rarely used.
 ## strum || If multiple notes are produced (usually a chord, given by providing an array to one of the pitch parameters), code::\strum:: is the number of beats to delay each successive note onset. When using code::\strum::, another key is active, code::\strumEndsTogether::. If false (the default), each strummed node will play for its full duration and the releases will be staggered. If true, the releases will occur at the same time.
 
 code::

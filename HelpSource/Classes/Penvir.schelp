@@ -45,6 +45,6 @@ z = y.asStream;
 )
 
 t.next;
-t.next;
+z.next;
 x.postln;	// x stays unchanged
 ::
