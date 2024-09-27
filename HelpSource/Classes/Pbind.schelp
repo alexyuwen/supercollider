@@ -182,7 +182,7 @@ SynthDef(\test, { |out, freq = 440, amp = 0.1, nharms = 10, pan = 0, gate = 1|
 	OffsetOut.ar(out, Pan2.ar(audio, pan, env));
 }).add;
 
-// Events are written as parantheses enclosing key/value pairs
+// Events are written as parentheses enclosing key/value pairs
 (instrument: \test).play;
 (instrument: \test, freq: 20, nharms: 50).play;
 )

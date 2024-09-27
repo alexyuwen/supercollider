@@ -4,7 +4,7 @@ categories:: Streams-Patterns-Events>Patterns>Data Sharing
 related:: Classes/Plambda, Classes/Pget
 
 DESCRIPTION::
-link::Classes/Plet::/link::Classes/Pget:: are used to share data between patterns inside of a link::Classes/Plambda::
+link::Classes/Plet::/link::Classes/Pget:: are used to share data between patterns inside of a link::Classes/Plambda::.
 
 Plet defines a variable containing a pattern or data for sharing within the scope of a link::Classes/Plambda::. 
 
@@ -47,7 +47,7 @@ code::
 	/*
 
 	Two patterns playing in parallel, 
-	sharing data between eachother
+	sharing data between each other
 
 	*/
 
