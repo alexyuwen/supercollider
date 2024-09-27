@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - uses: pre-commit/action@v3.0.0
+      - uses: pre-commit/action@v3.0.1
         name: 'Run pre-commit'
         env:
           FULL_CHECK: 1
@@ -80,7 +80,7 @@ jobs:
     needs: [version-getter, build-linux]
     uses: ./.github/workflows/test_linux.yml
     with:
-      artifact-file: "SuperCollider-${{ needs.version-getter.outputs.sc-version }}-linux-jammy-gcc12"
+      artifact-file: "SuperCollider-${{ needs.version-getter.outputs.sc-version }}-ubuntu-22.04-gcc12"
     secrets: inherit
 
   test-macos:

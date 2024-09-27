@@ -45,13 +45,14 @@ Primitives for String.
 #include <boost/regex.hpp>
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/unordered_set.hpp>
-#include <boost/filesystem/fstream.hpp> // ifstream
-#include <boost/filesystem/path.hpp> // path
+
+#include <fstream>
+#include <filesystem>
 
 #include <yaml-cpp/yaml.h>
 
 using namespace std;
-namespace bfs = boost::filesystem;
+namespace fs = std::filesystem;
 
 int prStringAsSymbol(struct VMGlobals* g, int numArgsPushed) {
     PyrSlot* a;
@@ -589,9 +590,9 @@ int prString_PathMatch(struct VMGlobals* g, int numArgsPushed) {
     }
 
     // read all paths into a vector
-    std::vector<bfs::path> paths;
+    std::vector<fs::path> paths;
     while (true) {
-        const bfs::path& matched_path = SC_Filesystem::globNext(glob);
+        const fs::path& matched_path = SC_Filesystem::globNext(glob);
         if (matched_path.empty())
             break;
         else
@@ -622,10 +623,13 @@ int prString_Getenv(struct VMGlobals* g, int /* numArgsPushed */) {
         return this_err;
 
 #ifdef _WIN32
-    const auto count = GetEnvironmentVariable(this_str.c_str(), nullptr, 0);
-    std::string buf(count, 0);
+    const auto this_str_w = SC_Codecvt::utf8_cstr_to_utf16_wstring(this_str.c_str());
+    const auto count = GetEnvironmentVariableW(this_str_w.c_str(), nullptr, 0);
+    std::string buf;
     if (count != 0) {
-        GetEnvironmentVariable(this_str.c_str(), buf.data(), buf.size());
+        std::wstring wbuf(count, 0);
+        GetEnvironmentVariableW(this_str_w.c_str(), wbuf.data(), count);
+        buf = SC_Codecvt::utf16_wcstr_to_utf8_string(wbuf.c_str());
     }
     char* value = count != 0 ? buf.data() : nullptr;
 #else
@@ -658,7 +662,7 @@ int prString_Setenv(struct VMGlobals* g, int numArgsPushed) {
 
     if (IsNil(slot_value)) {
 #ifdef _WIN32
-        SetEnvironmentVariable(this_name_str.c_str(), nullptr);
+        SetEnvironmentVariableW(SC_Codecvt::utf8_cstr_to_utf16_wstring(this_name_str.c_str()).c_str(), nullptr);
 #else
         unsetenv(this_name_str.c_str());
 #endif
@@ -667,7 +671,8 @@ int prString_Setenv(struct VMGlobals* g, int numArgsPushed) {
         if (value_err != errNone)
             return value_err;
 #ifdef _WIN32
-        SetEnvironmentVariable(this_name_str.c_str(), value_str.c_str());
+        SetEnvironmentVariableW(SC_Codecvt::utf8_cstr_to_utf16_wstring(this_name_str.c_str()).c_str(),
+                                SC_Codecvt::utf8_cstr_to_utf16_wstring(value_str.c_str()).c_str());
 #else
         setenv(this_name_str.c_str(), value_str.c_str(), 1);
 #endif
@@ -883,7 +888,7 @@ int prString_StandardizePath(struct VMGlobals* g, int /* numArgsPushed */) {
     if (err != errNone)
         return err;
 
-    bfs::path p = SC_Codecvt::utf8_str_to_path(ipath);
+    fs::path p = SC_Codecvt::utf8_str_to_path(ipath);
     p = SC_Filesystem::instance().expandTilde(p);
     bool isAlias;
     p = SC_Filesystem::resolveIfAlias(p, isAlias);
@@ -1024,8 +1029,8 @@ int prString_ParseYAMLFile(struct VMGlobals* g, int numArgsPushed) {
 
     string str((const char*)slotRawString(arg)->s, slotRawString(arg)->size);
 
-    const bfs::path& path = SC_Codecvt::utf8_str_to_path(str);
-    bfs::ifstream fin(path);
+    const fs::path& path = SC_Codecvt::utf8_str_to_path(str);
+    std::ifstream fin(path);
     YAML::Node doc = YAML::Load(fin);
     yaml_traverse(g, doc, nullptr, arg);
 

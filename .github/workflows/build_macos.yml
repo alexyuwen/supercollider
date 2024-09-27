@@ -16,7 +16,7 @@ jobs:
           - job-name: "universal"
             os-version: "12"
             xcode-version: "13.4.1"
-            deployment-target: "10.14"
+            deployment-target: "10.15"
             cmake-architectures: "x86_64;arm64"
             use-syslibs: false
             shared-libscsynth: false
@@ -25,13 +25,13 @@ jobs:
             build-readline: false
             build-fftw: false
             artifact-suffix: "macOS-universal"
-            verify-app: false
+            verify-app: true
 
           - job-name: "x64 legacy"
             os-version: "12"
             xcode-version: "13.4.1"
-            qt-version: "5.9.9" # will use qt from aqtinstall
-            deployment-target: "10.11"
+            qt-version: "5.15.2" # will use qt from aqtinstall
+            deployment-target: "10.15"
             cmake-architectures: x86_64
             use-syslibs: false
             shared-libscsynth: false
@@ -44,7 +44,7 @@ jobs:
           - job-name: "x64 use system libraries"
             os-version: "12"
             xcode-version: "13.4.1"
-            deployment-target: "10.14"
+            deployment-target: "10.15"
             cmake-architectures: x86_64
             use-syslibs: true
             shared-libscsynth: false
@@ -53,7 +53,7 @@ jobs:
           - job-name: "x64 shared libscsynth"
             os-version: "12"
             xcode-version: "13.4.1"
-            deployment-target: "10.14"
+            deployment-target: "10.15"
             cmake-architectures: x86_64
             use-syslibs: false
             shared-libscsynth: true
@@ -64,9 +64,9 @@ jobs:
       BUILD_PATH: ${{ github.workspace }}/build
       INSTALL_PATH: ${{ github.workspace }}/build/Install
       HOMEBREW_NO_ANALYTICS: 1
+      HOMEBREW_NO_ENV_HINTS: 1
       HOMEBREW_NO_AUTO_UPDATE: 1
       HOMEBREW_NO_INSTALL_CLEANUP: 1
-      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
       USE_SYSLIBS: ${{ matrix.use-syslibs }}
       SHARED_LIBSCSYNTH: ${{ matrix.shared-libscsynth }}
       ARTIFACT_FILE: "SuperCollider-${{ inputs.sc-version }}-${{ matrix.artifact-suffix }}.dmg"
@@ -90,11 +90,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/ccache
-          key: ${{ runner.os }}-${{ matrix.os-version }}-${{ matrix.xcode-version }}-${{ matrix.use-syslibs }}-${{ matrix.shared-libscsynth }}-${{ matrix.qt-version }}-${{ matrix.cmake-architectures }}-${{ steps.current-date.outputs.stamp }}
-          restore-keys: ${{ runner.os }}-${{ matrix.os-version }}-${{ matrix.xcode-version }}-${{ matrix.use-syslibs }}-${{ matrix.shared-libscsynth }}-${{ matrix.qt-version }}-${{ matrix.cmake-architectures }}-
+          key: ${{ runner.os }}-${{ matrix.os-version }}-${{ matrix.xcode-version }}-${{ matrix.deployment-target }}-${{ matrix.use-syslibs }}-${{ matrix.shared-libscsynth }}-${{ matrix.qt-version }}-${{ matrix.cmake-architectures }}-${{ steps.current-date.outputs.stamp }}
+          restore-keys: ${{ runner.os }}-${{ matrix.os-version }}-${{ matrix.xcode-version }}-${{ matrix.deployment-target }}-${{ matrix.use-syslibs }}-${{ matrix.shared-libscsynth }}-${{ matrix.qt-version }}-${{ matrix.cmake-architectures }}-
 
       - name: cleanup homebrew downloads # always remove existing downloads first, as we bring back relevant downloads from cache
-        run: rm -rf $(brew --cache)
+        run: rm -rf $(brew --cache)/downloads
 
       - name: cache homebrew downloads
         uses: actions/cache@v4
@@ -130,13 +130,15 @@ jobs:
 
           # install universal versions of homebrew libraries
           if [[ "${{ matrix.cmake-architectures }}" != "x86_64" ]]; then
+              UNIVERSAL_PACKAGES=
+              if [[ "${{ matrix.build-libsndfile }}" != "true" ]]; then UNIVERSAL_PACKAGES="libsndfile $UNIVERSAL_PACKAGES"; fi
+              if [[ "${{ matrix.build-readline }}" != "true" ]]; then UNIVERSAL_PACKAGES="readline $UNIVERSAL_PACKAGES"; fi
+              if [[ "${{ matrix.build-fftw }}" != "true" ]]; then UNIVERSAL_PACKAGES="fftw $UNIVERSAL_PACKAGES"; fi
+              if [[ "${{ matrix.system-portaudio }}" != "false" ]]; then UNIVERSAL_PACKAGES="portaudio $UNIVERSAL_PACKAGES"; fi
               echo "Downloading script for creating universal binaries from homebrew packages"
-              curl -O -J -L https://gist.githubusercontent.com/dyfer/6c83905d4593750105897e51e87ec345/raw/1f89f2fe767a2e637387e74f0c8dcc86a0963f60/brew-install-universal.sh
+              curl --no-progress-meter -O -J -L https://gist.githubusercontent.com/dyfer/6c83905d4593750105897e51e87ec345/raw/98e073d755cc3ca8426e20c30f51e9bac2bc9858/brew-install-universal.sh
               chmod +x brew-install-universal.sh
-              if [[ "${{ matrix.build-libsndfile }}" != "true" ]]; then ./brew-install-universal.sh libsndfile; fi
-              if [[ "${{ matrix.build-readline }}" != "true" ]]; then ./brew-install-universal.sh readline; fi
-              if [[ "${{ matrix.build-fftw }}" != "true" ]]; then ./brew-install-universal.sh fftw; fi
-              if [[ "${{ matrix.system-portaudio }}" != "false" ]]; then ./brew-install-universal.sh portaudio; fi
+              ./brew-install-universal.sh $UNIVERSAL_PACKAGES
           fi
 
       - name: install libsndfile # to make it compatible with older OSes (lower deployment target)
@@ -160,7 +162,7 @@ jobs:
 
       - name: install system libraries
         if: env.USE_SYSLIBS == 'true'
-        run: brew install yaml-cpp boost@1.76
+        run: brew install yaml-cpp boost
 
       - name: install qt from homebrew
         if: matrix.cmake-architectures == 'x86_64' && !matrix.qt-version
@@ -187,7 +189,7 @@ jobs:
 
           EXTRA_CMAKE_FLAGS=
 
-          if $USE_SYSLIBS; then EXTRA_CMAKE_FLAGS="-DSYSTEM_BOOST=ON -DSYSTEM_YAMLCPP=ON -DBoost_INCLUDE_DIR=/usr/local/opt/boost@1.76/include $EXTRA_CMAKE_FLAGS"; fi
+          if $USE_SYSLIBS; then EXTRA_CMAKE_FLAGS="-DSYSTEM_BOOST=ON -DSYSTEM_YAMLCPP=ON $EXTRA_CMAKE_FLAGS"; fi
 
           if $SHARED_LIBSCSYNTH; then EXTRA_CMAKE_FLAGS="-DLIBSCSYNTH=ON $EXTRA_CMAKE_FLAGS"; fi
 
